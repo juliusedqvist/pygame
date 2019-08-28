@@ -1,0 +1,212 @@
+import pygame
+from random import randint
+
+pygame.init()
+
+win_width = 400
+win_height = 400
+snake_dim = 20  # Snake size
+size_addon = 2  # What it says
+win = pygame.display.set_mode((win_width, win_height))  # Captain obvious
+pygame.display.set_caption('Snake')  # Fungerar inte i arch fuck me
+
+
+class Char:
+
+   def __init__(self, x, y, width, height, vel):  # Official character variables
+       self.x = x
+       self.y = y
+       self.width = width
+       self.height = height
+       self.vel = vel
+
+   def draw_char(self, color):  # Get the character on board
+
+       pygame.draw.rect(win, (color[0], color[1], color[2]), (self.x, self.y, self.width, self.height))
+
+
+class Snake(Char):
+
+   def __init__(self, size):  # Snake variables
+
+       self.score = 1
+       self.x = win_width / 2  # Doing it dynamic
+       self.y = win_height / 2
+       self.height = size
+       self.width = size
+       self.vel = 4  # Only works with denominators to 20
+       self.movement_score = [0, 0]
+       self.lenSnake = []
+       self.prev_pos = []
+       self.pos_prev = []
+       self.latest_key = 0
+
+   def latest_input(self):  # Gets the latest key pressed
+
+       keys = pygame.key.get_pressed()
+       try:
+
+           print(snake.lenSnake[0])
+       except IndexError:
+           print("meh")
+       print(self.x, self.y)
+
+       if keys[pygame.K_LEFT] and self.pos_prev[1] != (self.x - self.vel, self.y):
+           self.latest_key = 1
+
+       if keys[pygame.K_UP] and self.pos_prev[1] != (self.x, self.y - self.vel):
+           self.latest_key = 2
+
+       if keys[pygame.K_RIGHT] and self.pos_prev[1] != (self.x + self.vel, self.y):
+           self.latest_key = 3
+
+       if keys[pygame.K_DOWN] and self.pos_prev[1] != (self.x, self.y + self.vel):
+           self.latest_key = 4
+
+   def check_movement(self):  # Checks for inputs and assigns movement value
+
+       if self.latest_key == 1:
+           self.movement_score = [- self.vel, 0]
+
+       if self.latest_key == 3:
+           self.movement_score = [self.vel, 0]
+
+       if self.latest_key == 2:
+           self.movement_score = [0, - self.vel]
+
+       if self.latest_key == 4:
+           self.movement_score = [0, self.vel]
+
+   def move(self):
+
+       if snake.x >= win_width:
+           snake.x = 0
+       if snake.y >= win_height:
+           snake.y = 0
+       if snake.y < 0:
+           snake.y = win_height
+       if snake.x < 0:
+           snake.x = win_width
+
+       self.x += self.movement_score[0]  # To get x movement
+       self.y += self.movement_score[1]  # To get y movement
+
+       self.log_pos()  # remembers previous position
+
+   def quit_game(self):  # Kills self
+
+       compare_ls = []
+       x = 0
+       for i in self.pos_prev:
+           if self.score * int(self.height / self.vel) > x:
+               x += 1
+               compare_ls.append(i)  # Magic, gets length of snek in whole blocks
+
+       coord = self.x, self.y
+
+       first = len(compare_ls)
+
+       for i in range(len(compare_ls)):
+           if coord in compare_ls:
+               compare_ls.remove(coord)  # Magic 2, matches length of snek with snek head
+
+       last = len(compare_ls)
+
+       if first > last + 1 and first + last > 6:
+           return True  # Kills game if snake in self
+
+   def log_pos(self):
+
+       """ Stores previous positions in a list """
+
+       pos = (self.x, self.y)
+       self.prev_pos.append(pos)
+
+       if len(self.prev_pos) > int(self.score * (self.height - (self.height / self.vel))):
+           self.prev_pos.pop(0)  # Removes last positions so the list doesn't become too long
+
+       self.pos_prev = [i for i in reversed(self.prev_pos)]  # Uno reverse card
+
+   def draw_add_rect(self):
+
+       """ Draws the next tail piece """
+
+       x = 0
+       test_list = self.pos_prev
+       for i in range(self.score):
+           self.lenSnake = test_list[x * int(self.height / self.vel)]
+           pygame.draw.rect(win, (0, 255, 0), (test_list[x * int(self.height / self.vel)][0],
+                                               test_list[x * int(self.height / self.vel)][1], self.width, self.height))
+           x += 1
+
+
+class Apple(Char):
+
+   def __init__(self, score_val):
+
+       """ Creates variables for the apple when the object is created """
+
+       place_x = randint(1, win_width / snake.width)
+       place_y = randint(1, win_height / snake.height)
+
+       self.x = (place_x - 1) * snake.width
+       self.y = (place_y - 1) * snake.height
+
+       self.height = snake.height
+       self.width = snake.width
+
+       self.score_val = score_val
+
+   def check_collision(self):
+
+       """ Gets cords of snake head and apple and then checks if they're on the same spot """
+
+       coord = (self.x, self.y)
+       coord_snake = (snake.x, snake.y)
+
+       if coord == coord_snake:
+           self.del_self()
+           snake.score += self.score_val
+       snake.draw_add_rect()  # Will update the length if collision happened
+
+   def del_self(self):
+
+       self.__init__(self.score_val)
+
+
+snake = Snake(20)  # Creates objects
+apple = Apple(size_addon)
+
+
+def draw_board():
+   for i in range(int(win_height / snake_dim)):
+       pygame.draw.line(win, (0, 0, 150), (i * snake_dim, 0), (i * snake_dim, win_height))
+       pygame.draw.line(win, (0, 0, 150), (0, i * snake_dim), (win_width, i * snake_dim))
+
+
+if __name__ == '__main__':
+   game = True
+   while game:
+       pygame.time.delay(1)
+
+       for event in pygame.event.get():
+           if event.type == pygame.QUIT:
+               game = False
+
+       win.fill((0, 0, 0))
+       draw_board()
+       snake.latest_input()
+       if snake.x % snake.height == 0 and snake.y % snake.height == 0:
+           snake.check_movement()
+       snake.move()
+       snake.draw_char([0, 255, 0])
+       apple.check_collision()
+       apple.draw_char([255, 0, 0])
+       #pygame.draw.rect(win, (0, 0, 255), (snake.lenSnake[0][0], snake.lenSnake[0[1]]), (20, 20))
+
+       pygame.display.update()
+       if snake.quit_game():
+           game = False
+
+   pygame.quit()
+
